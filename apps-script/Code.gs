@@ -11,9 +11,9 @@
 
 const HEADERS = ["Server time", "Student", "Event", "Session", "Case ID", "Case", "Question ID",
   "Question", "Type", "Her answer", "Correct answer", "Correct? (1/0)", "Attempt", "Hint used",
-  "Time (s)", "Total XP", "Detail", "Client time"];
+  "Time (s)", "Total XP", "Detail", "Client time", "Unit"];
 const KEYS = ["student", "event", "session", "caseId", "caseTitle", "qid", "question", "qtype",
-  "chosen", "correct", "isCorrect", "attempt", "hint", "timeSec", "xp", "detail", "clientTime"];
+  "chosen", "correct", "isCorrect", "attempt", "hint", "timeSec", "xp", "detail", "clientTime", "unit"];
 
 function setup() {
   const ss = SpreadsheetApp.getActive();
@@ -24,15 +24,18 @@ function setup() {
     log.setFrozenRows(1);
     log.setColumnWidth(8, 360);
   }
+  // add any header cells missing from an older setup (e.g. "Unit")
+  log.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS])
+    .setFontWeight("bold").setBackground("#0b1f4d").setFontColor("#ffffff");
   let sum = ss.getSheetByName("Summary") || ss.insertSheet("Summary", 1);
   sum.clear();
   sum.getRange("A1").setValue("First-try accuracy by case").setFontWeight("bold");
   sum.getRange("A2").setFormula(
-    "=IFERROR(QUERY(Log!A:R,\"select B, F, count(L), avg(L) where C='answer' and M=1 group by B, F " +
+    "=IFERROR(QUERY(Log!A:S,\"select B, F, count(L), avg(L) where C='answer' and M=1 group by B, F " +
     "label count(L) 'Questions', avg(L) 'First-try accuracy'\",1),\"No answers yet\")");
   sum.getRange("F1").setValue("Most-missed questions (wrong answers)").setFontWeight("bold");
   sum.getRange("F2").setFormula(
-    "=IFERROR(QUERY(Log!A:R,\"select B, H, count(L) where C='answer' and L=0 group by B, H " +
+    "=IFERROR(QUERY(Log!A:S,\"select B, H, count(L) where C='answer' and L=0 group by B, H " +
     "order by count(L) desc label count(L) 'Times wrong'\",1),\"No wrong answers yet\")");
   sum.getRange("D:D").setNumberFormat("0%");
   sum.setColumnWidth(7, 420);

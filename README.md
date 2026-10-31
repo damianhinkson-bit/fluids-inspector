@@ -1,12 +1,20 @@
-# Fluids Inspector — ENVH 112 Unit 1
+# Inspector Training — ENVH 112
 
-An interactive multiple-choice game built on the *Unit 1: Fluids* class notes from Barbados Community College. The student plays a trainee Environmental Health Inspector and works through 11 field cases (84 questions), then a mixed Final Inspection. Every answer she gives is logged to a Google Sheet.
+An interactive multiple-choice game built on the ENVH 112 class notes from Barbados Community College. The student plays a trainee Environmental Health Inspector. Every answer she gives is logged to a Google Sheet.
+
+| Unit | Cases | Questions |
+|---|---|---|
+| Unit 1 · Fluids | 11 | 84 |
+| Unit 2 · Forces | 12 | 109 (with drawn motion graphs) |
+
+Each unit has its own Final Inspection: 12 mixed questions with no hints. Both units are open from the start.
 
 | File | What it is |
 |---|---|
 | `index.html` | **The game** — share this link with the student |
 | `teacher.html` | **Your dashboard** — accuracy by topic, the questions she misses (and which wrong answers she picks), and a full activity timeline |
-| `questions.js` | The question bank — edit it to add or change questions |
+| `questions.js` | Unit 1 question bank |
+| `questions-u2.js` | Unit 2 question bank. It also holds the `UNITS` list: to add Unit 3, make `questions-u3.js` and add it there and to both HTML pages |
 | `config.js` | Holds your Google Apps Script URL |
 | `apps-script/Code.gs` | Backend code you paste into Google Apps Script |
 
@@ -33,5 +41,5 @@ On `…/teacher.html`, enter the teacher key to see the dashboard.
 ## Scoring
 - 10 XP for a correct first try, 5 XP for a correct second try. Using a hint takes off 3 XP. XP is only awarded the first time she gets a question right.
 - Stars come from first-try accuracy: 90% or more = ★★★, 70% or more = ★★, anything below = ★.
-- Each case unlocks after the one before it. The Final Inspection is 12 random questions from all cases, with no hints.
+- Within a unit, each case unlocks after the one before it.
 - Progress is saved in her browser. If a different name is typed on the same device, progress starts fresh.

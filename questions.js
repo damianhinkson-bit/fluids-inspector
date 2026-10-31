@@ -470,5 +470,7 @@ const RANKS = [
   { xp: 100, title: "Junior Inspector" },
   { xp: 250, title: "Field Inspector" },
   { xp: 450, title: "Senior Inspector" },
-  { xp: 650, title: "Chief Inspector" }
+  { xp: 650, title: "Chief Inspector" },
+  { xp: 1000, title: "Principal Inspector" },
+  { xp: 1400, title: "Chief EHO" }
 ];

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>Teacher view · Fluids Inspector</title>
+<title>Teacher view · Inspector Training</title>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <style>
@@ -28,7 +28,7 @@
 </head>
 <body>
 <div id="app">
-  <div class="topbar"><div class="badge">T</div><div class="who"><span>Teacher view</span><b>Fluids Inspector</b></div></div>
+  <div class="topbar"><div class="badge">T</div><div class="who"><span>Teacher view</span><b>Inspector Training</b></div></div>
   <div class="panel ctl" id="ctl">
     <input id="key" placeholder="Teacher key" type="password">
     <button class="btn" id="load">Load activity</button>
@@ -39,6 +39,7 @@
 </div>
 <script src="config.js"></script>
 <script src="questions.js"></script>
+<script src="questions-u2.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -80,11 +81,11 @@ function render() {
   const xp = R.length ? Math.max(...R.map(r => +r.xp || 0)) : 0;
 
   // per case
-  const caseRows = CASES.map(c => {
-    const f = first.filter(r => r.caseId === c.id || (r.caseId === "final" && r.qid.startsWith(c.id + "q")));
+  const caseRows = UNITS.flatMap(u => u.cases.map(c => ({ c, u }))).map(({ c, u }) => {
+    const f = first.filter(r => r.qid.startsWith(c.id + "q")); // includes final-inspection answers
     const ok = f.filter(r => +r.isCorrect === 1).length;
     const done = R.some(r => r.event === "case_complete" && r.caseId === c.id);
-    return { c, n: f.length, p: f.length ? ok / f.length : null, done };
+    return { c, u, n: f.length, p: f.length ? ok / f.length : null, done };
   });
 
   // most missed
@@ -99,7 +100,7 @@ function render() {
   <div class="tiles">
     <div class="tile"><b>${first.length ? Math.round(firstOk / first.length * 100) : 0}%</b><span>First-try accuracy</span></div>
     <div class="tile"><b>${first.length}</b><span>Questions attempted</span></div>
-    <div class="tile"><b>${caseRows.filter(x => x.done).length}/${CASES.length}</b><span>Cases closed</span></div>
+    <div class="tile"><b>${caseRows.filter(x => x.done).length}/${caseRows.length}</b><span>Cases closed</span></div>
     <div class="tile"><b>${xp}</b><span>XP</span></div>
     <div class="tile"><b>${hints}</b><span>Hints used</span></div>
     <div class="tile"><b>${fmtDur(timeOn)}</b><span>Time answering · ${sessions} sessions</span></div>
@@ -108,9 +109,15 @@ function render() {
 
   <div class="panel"><h3>By topic (first try)</h3><table>
     <tr><th>Case</th><th>Answered</th><th>Accuracy</th><th></th></tr>
-    ${caseRows.map(x => `<tr><td>${x.c.icon} ${esc(x.c.title)}<div class="muted">${esc(x.c.outcome)}</div></td>
+    ${UNITS.map(u => {
+      const rows = caseRows.filter(x => x.u === u), a = rows.reduce((n, x) => n + x.n, 0);
+      const ok = rows.reduce((n, x) => n + (x.p || 0) * x.n, 0);
+      return `<tr><th colspan="4" style="padding-top:16px;color:var(--ink)">${u.icon} ${u.name} · ${u.title}
+        <span class="muted" style="text-transform:none;letter-spacing:0">— ${a ? Math.round(ok / a * 100) + "% first try over " + a + " questions" : "not started"}</span></th></tr>` +
+      rows.map(x => `<tr><td>${x.c.icon} ${esc(x.c.title)}<div class="muted">${esc(x.c.outcome)}</div></td>
       <td>${x.n}</td><td>${x.p === null ? "—" : Math.round(x.p * 100) + "%"}</td>
-      <td style="width:30%"><div class="bar"><i style="width:${(x.p || 0) * 100}%;background:${color(x.p || 0)}"></i></div></td></tr>`).join("")}
+      <td style="width:30%"><div class="bar"><i style="width:${(x.p || 0) * 100}%;background:${color(x.p || 0)}"></i></div></td></tr>`).join("");
+    }).join("")}
   </table></div>
 
   <div class="panel"><h3>Where she's going wrong</h3>

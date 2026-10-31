@@ -1,9 +1,9 @@
-/* Fluids Inspector — game logic. Plain JS, no build step. */
+/* ENVH 112 Inspector — game logic. Plain JS, no build step. */
 (() => {
-  const STORE = "fluidsInspector.v1";
+  const STORE = "fluidsInspector.v1"; // keep key so existing progress carries over
   const app = document.getElementById("app");
   const FINAL_COUNT = 12;
-  const MAX_XP = CASES.reduce((n, c) => n + c.questions.length, 0) * 10;
+  const MAX_XP = UNITS.reduce((n, u) => n + u.cases.reduce((m, c) => m + c.questions.length, 0), 0) * 10;
 
   let S = load();
   const session = Math.random().toString(36).slice(2, 10);
@@ -11,15 +11,22 @@
 
   /* ---------- storage ---------- */
   function load() {
-    try { return JSON.parse(localStorage.getItem(STORE)) || fresh(); } catch { return fresh(); }
+    let s;
+    try { s = JSON.parse(localStorage.getItem(STORE)) || fresh(); } catch { s = fresh(); }
+    if (s.done && s.done.final) { s.done["final-u1"] = s.done.final; delete s.done.final; } // v1 → units
+    if (!s.unit) s.unit = "u1";
+    return s;
   }
-  function fresh() { return { name: "", xp: 0, done: {}, earned: {} }; }
+  function fresh() { return { name: "", xp: 0, done: {}, earned: {}, unit: "u1" }; }
+  const unitById = id => UNITS.find(u => u.id === id) || UNITS[0];
+  const unitOfCase = cid => cid && cid.startsWith("final-") ? unitById(cid.slice(6))
+    : UNITS.find(u => u.cases.some(c => c.id === cid));
   function save() { try { localStorage.setItem(STORE, JSON.stringify(S)); } catch {} }
 
   /* ---------- logging to Google Sheet ---------- */
   function log(event, data = {}) {
     const row = {
-      student: S.name, session, event,
+      student: S.name, session, event, unit: (unitOfCase(data.caseId) || {}).title || "",
       caseId: data.caseId || "", caseTitle: data.caseTitle || "",
       qid: data.qid || "", question: data.question || "", qtype: data.qtype || "",
       chosen: data.chosen || "", correct: data.correct || "",
@@ -51,7 +58,7 @@
   const nextRank = () => RANKS.find(r => r.xp > S.xp);
   const starsFor = pct => pct >= 0.9 ? 3 : pct >= 0.7 ? 2 : 1;
   const starStr = n => "★".repeat(n) + "☆".repeat(3 - n);
-  const allDone = () => CASES.every(c => S.done[c.id]);
+  const allDone = u => u.cases.every(c => S.done[c.id]);
   function toast(msg) {
     const t = document.getElementById("toast");
     t.textContent = msg; t.classList.add("show");
@@ -75,9 +82,9 @@
   function welcome() {
     app.innerHTML = `
       <div class="hero pop">
-        <div class="kicker">ENVH 112 · Unit 1</div>
-        <h1>Fluids Inspector</h1>
-        <p>You're the newest Environmental Health Inspector in Barbados. Work through 11 field cases — tankers, refuse trucks, manholes and hurricanes — using density, pressure, buoyancy and flow.</p>
+        <div class="kicker">ENVH 112 · Physics for EH Inspection</div>
+        <h1>Inspector Training</h1>
+        <p>You're the newest Environmental Health Inspector in Barbados. Work through field cases — tankers, scaffolds, manholes, racking and hurricanes — using the physics from each unit.</p>
         <form class="namebox" id="nameForm">
           <input id="nameIn" maxlength="40" placeholder="Type your name to start" value="${esc(S.name)}" autocomplete="name" required>
           <button class="btn" type="submit">Start shift →</button>
@@ -86,7 +93,7 @@
       <div class="howto">
         <div><b>🎯 Pick the answer</b>Every question is multiple choice. Two tries per question.</div>
         <div><b>⭐ Earn XP</b>10 XP first try, 5 XP second try. Hints cost 3 XP.</div>
-        <div><b>📈 Rank up</b>Trainee → Chief Inspector. Clear all cases to unlock the Final Inspection.</div>
+        <div><b>📈 Rank up</b>Trainee → Chief EHO. Clear a unit's cases to unlock its Final Inspection.</div>
       </div>`;
     document.getElementById("nameForm").onsubmit = e => {
       e.preventDefault();
@@ -101,21 +108,28 @@
 
   function map() {
     play = null;
-    const cards = CASES.map((c, i) => {
-      const locked = i > 0 && !S.done[CASES[i - 1].id];
+    const U = unitById(S.unit), CS = U.cases, finId = "final-" + U.id;
+    const tabs = UNITS.map(u => {
+      const n = u.cases.filter(c => S.done[c.id]).length;
+      return `<button class="unittab ${u.id === U.id ? "on" : ""}" data-unit="${u.id}">
+        <span class="ui">${u.icon}</span><span><small>${u.name}</small><b>${u.title}</b><em>${n}/${u.cases.length} closed</em></span></button>`;
+    }).join("");
+    const cards = CS.map((c, i) => {
+      const locked = i > 0 && !S.done[CS[i - 1].id];
       const d = S.done[c.id];
       return `<button class="case ${locked ? "locked" : ""}" ${locked ? "disabled" : ""} data-case="${c.id}">
         <span class="num">Case ${i + 1}</span><span class="ic">${c.icon}</span>
         <h3>${c.title}</h3><span class="pl">📍 ${c.place} · ${c.questions.length} questions</span>
         <span class="stars">${d ? starStr(d.stars) : ""}</span></button>`;
     }).join("");
-    const fin = S.done.final;
+    const fin = S.done[finId], open = allDone(U);
     app.innerHTML = topbar() + `
-      <div class="sectionhead"><h2>Your case files</h2><small>${Object.keys(S.done).filter(k => k !== "final").length}/${CASES.length} closed</small></div>
+      <div class="unittabs">${tabs}</div>
+      <div class="sectionhead"><h2>${U.title} case files</h2><small>${U.blurb}</small></div>
       <div class="grid">${cards}
-        <button class="case final ${allDone() ? "" : "locked"}" ${allDone() ? "" : "disabled"} data-case="final">
-          <span class="num">Final</span><span class="ic">🏅</span><h3>Final Inspection</h3>
-          <span class="pl">${FINAL_COUNT} mixed questions from every case</span>
+        <button class="case final ${open ? "" : "locked"}" ${open ? "" : "disabled"} data-case="${finId}">
+          <span class="num">${U.name} Final</span><span class="ic">🏅</span><h3>Final Inspection</h3>
+          <span class="pl">${FINAL_COUNT} mixed ${U.title} questions</span>
           <span class="stars">${fin ? starStr(fin.stars) : ""}</span></button>
       </div>`;
     bind();
@@ -123,14 +137,16 @@
 
   function startCase(id) {
     let c;
-    if (id === "final") {
-      const pool = CASES.flatMap(cs => cs.questions.map(q => ({ ...q, _case: cs.id })));
-      c = { id: "final", icon: "🏅", title: "Final Inspection", place: "All of Barbados",
-        story: "The Chief Inspector is checking your work. Mixed questions from every case — no hints this time.",
+    if (id.startsWith("final-")) {
+      const U = unitById(id.slice(6));
+      // skip follow-on questions ("Same board…", "And in the…") that need their case's story
+      const pool = U.cases.flatMap(cs => cs.questions).filter(q => !/^(Same|And )/.test(q.q));
+      c = { id, icon: "🏅", title: `${U.title} Final Inspection`, place: "All of Barbados",
+        story: `The Chief Inspector is checking your ${U.title} work. Mixed questions from every case — no hints this time.`,
         questions: shuffle(pool).slice(0, FINAL_COUNT), noHints: true };
-    } else c = CASES.find(x => x.id === id);
+    } else c = unitOfCase(id).cases.find(x => x.id === id);
     play = { c, i: 0, results: [], missed: [], xpStart: S.xp };
-    log("case_start", { caseId: c.id, caseTitle: c.title, detail: c.id === "final" ? c.questions.map(q => q.id).join(",") : "" });
+    log("case_start", { caseId: c.id, caseTitle: c.title, detail: c.id.startsWith("final-") ? c.questions.map(q => q.id).join(",") : "" });
     question();
   }
 
@@ -148,6 +164,7 @@
         ${i === 0 ? `<div class="brief"><b>📍 ${c.place}</b>${c.story}</div>` : ""}
         <span class="qtag ${q.type === "calc" ? "calc" : ""}">${q.type === "calc" ? "🧮 Calculation" : "💡 Concept"}</span>
         <p class="question">${q.q}</p>
+        ${q.img ? `<div class="figure">${q.img}</div>` : ""}
         <div class="options">${opts.map((o, k) => `<button class="opt" data-opt="${k}"><span class="k">${"ABCD"[k]}</span><span>${o}</span></button>`).join("")}</div>
         <div id="hintArea"></div>
         <div id="fb"></div>
@@ -222,13 +239,13 @@
     const before = rank().title;
     S.done[c.id] = { stars: Math.max(stars, prev ? prev.stars : 0), last: Math.round(pct * 100) };
     save();
-    log(c.id === "final" ? "final_complete" : "case_complete", { caseId: c.id, caseTitle: c.title,
+    log(c.id.startsWith("final-") ? "final_complete" : "case_complete", { caseId: c.id, caseTitle: c.title,
       detail: `${right}/${r.length} first try (${Math.round(pct * 100)}%), ${stars} stars` });
     const after = rank().title;
     app.innerHTML = topbar() + `
       <div class="panel result pop">
         <div style="font-size:44px">${c.icon}</div>
-        <h2>${c.id === "final" ? "Final Inspection complete" : "Case closed!"}</h2>
+        <h2>${c.id.startsWith("final-") ? "Final Inspection complete" : "Case closed!"}</h2>
         <div class="bigstars">${starStr(stars)}</div>
         <div class="stats">
           <div class="stat"><b>${right}/${r.length}</b><span>First-try correct</span></div>
@@ -254,6 +271,7 @@
       map();
     });
     app.querySelectorAll("[data-case]").forEach(b => b.onclick = () => !b.disabled && startCase(b.dataset.case));
+    app.querySelectorAll("[data-unit]").forEach(b => b.onclick = () => { S.unit = b.dataset.unit; save(); map(); });
     app.querySelectorAll("[data-opt]").forEach(b => b.onclick = () => choose(+b.dataset.opt));
   }
   document.addEventListener("keydown", e => {

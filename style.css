@@ -114,3 +114,16 @@ button{font:inherit;cursor:pointer;border:0}
 @keyframes pop{0%{transform:scale(.9);opacity:0}100%{transform:scale(1);opacity:1}}
 .pop{animation:pop .25s ease-out}
 @media (max-width:520px){.question{font-size:18px}.panel{padding:16px}}
+
+/* unit tabs */
+.unittabs{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:18px}
+.unittab{display:flex;gap:12px;align-items:center;text-align:left;background:var(--card);border:2px solid var(--line);
+  border-radius:var(--radius);padding:12px 14px;transition:border-color .15s}
+.unittab .ui{font-size:28px}
+.unittab small{display:block;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--sea)}
+.unittab b{display:block;font-family:Fraunces,serif;font-size:19px}
+.unittab em{font-style:normal;font-size:12px;color:var(--muted)}
+.unittab.on{border-color:var(--blue);background:var(--sky)}
+/* graphs in questions */
+.figure{background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px;margin:-6px 0 16px}
+.figure svg{display:block;width:100%;max-width:440px;height:auto;margin:0 auto}
